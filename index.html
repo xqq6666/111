@@ -216,9 +216,7 @@
             transition: all 0.3s ease;
         }
 
-        /* ===== 头部已完全移除 ===== */
-
-        /* ===== 专辑封面（静态图片） ===== */
+        /* ===== 专辑封面 ===== */
         .cover-area {
             display: flex;
             flex-direction: column;
@@ -242,15 +240,31 @@
             border: 1px solid rgba(255, 255, 255, 0.5);
             transition: all 0.6s ease;
             overflow: hidden;
+            cursor: pointer;
+            /* 双击提示 */
         }
         .flower-container::after {
-            content: '';
+            content: '🖱️ 双击换图';
             position: absolute;
-            inset: -10px;
-            border-radius: 50%;
-            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.20), transparent 70%);
+            bottom: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.0);
+            background: rgba(0, 0, 0, 0.0);
+            padding: 2px 12px;
+            border-radius: 20px;
+            transition: all 0.4s ease;
             pointer-events: none;
-            z-index: 2;
+            z-index: 5;
+            font-family: 'Georgia', serif;
+            letter-spacing: 1px;
+            white-space: nowrap;
+        }
+        .flower-container:hover::after {
+            color: rgba(255, 255, 255, 0.85);
+            background: rgba(0, 0, 0, 0.25);
+            backdrop-filter: blur(4px);
         }
 
         .flower-container img {
@@ -258,8 +272,21 @@
             height: 100%;
             object-fit: cover;
             border-radius: 50%;
-            transition: transform 0.6s ease;
+            /* ===== 🌀 图片旋转核心代码 ===== */
+            animation: spin 10s linear infinite;
+            animation-play-state: paused;
         }
+
+        /* 播放时恢复旋转 */
+        .flower-container.playing img {
+            animation-play-state: running;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+        }
+        /* ===== 旋转代码结束 ===== */
 
         /* 播放状态微光 */
         .flower-container.playing {
@@ -492,6 +519,10 @@
         .playlist-item .status .playing-icon {
             display: none;
             animation: pulse 1.2s ease-in-out infinite;
+	font-size:17px;
+	  color: #pink;              /* 内部填充色 */
+  	  -webkit-text-stroke: 1px white;  /* 外部描边 */
+    	font-weight: bold;
         }
         .playlist-item.active .status .playing-icon {
             display: inline;
@@ -595,6 +626,11 @@
             .player-footer .volume-control input[type="range"] {
                 width: 40px;
             }
+            .flower-container::after {
+                font-size: 9px;
+                bottom: 4px;
+                padding: 1px 10px;
+            }
         }
 
         @media (max-width: 380px) {
@@ -660,8 +696,8 @@
             <!-- 封面 & 静态图片 -->
             <div class="cover-area">
                 <div class="flower-container" id="flowerContainer">
-                    <!-- 默认使用 Unsplash 栀子花图片，您可以替换为自己的图片链接 -->
-                    <img src="nihao.png" />
+                    <!-- 默认图片，双击可切换 -->
+                    <img src="nihao.png" id="coverImage" />
                 </div>
 
                 <!-- 歌曲信息 -->
@@ -735,11 +771,11 @@
             id: 1,
             title: '',
             artist: '天天开心(ﾉ´▽｀)ﾉ♪',
-            src: 'haode.mp3',
+            src: 'haode.MP3',
         }, {
             id: 2,
             title:' ',
-            artist: '你不是要唱歌吗，我都没听你唱过哎(｡･ˇдˇ･｡)',
+            artist: '你不是要唱歌吗，我都没听你唱过哎 (｡･ˇдˇ･｡)',
             src: 'houlai.mp3',
         }, {
             id: 3,
@@ -749,9 +785,22 @@
         }, {
             id: 4,
             title: '',
-            artist: '(*ﾟ▽ﾟ)ﾉ',
+            artist: '看你那个状态一直是在听歌 听啥呢⸜\(•̥̑ .̮ •̥̑).:*･ﾟ',
             src: 'mei.mp3',
         }];
+
+        // ============================================================
+        //  🖼️ 图片列表 —— 双击封面可切换（按顺序循环）
+        //  第一张默认使用你的本地图片，后续可自由增删
+        // ============================================================
+        const imageList = [
+            'nihao.png',   // ← 你的本地图片
+            'lunhui.jpg',
+            'hua.jpg',	
+            'shi.jpg',
+            'huahua.jpg',
+        ];
+        let currentImageIndex = 0;
 
         // ============================================================
         //  状态
@@ -781,6 +830,7 @@
         const artistNameEl = document.getElementById('artistName');
         const playlistEl = document.getElementById('playlist');
         const flowerContainer = document.getElementById('flowerContainer');
+        const coverImage = document.getElementById('coverImage');
         const volumeSlider = document.getElementById('volumeSlider');
         const modeTip = document.getElementById('modeTip');
         const toast = document.getElementById('toast');
@@ -805,6 +855,18 @@
                 toast.classList.remove('show');
             }, duration);
         }
+
+        // ============================================================
+        //  🖼️ 双击切换图片
+        // ============================================================
+        flowerContainer.addEventListener('dblclick', function(e) {
+            // 防止双击触发其他事件
+            e.stopPropagation();
+            // 切换到下一张
+            currentImageIndex = (currentImageIndex + 1) % imageList.length;
+            coverImage.src = imageList[currentImageIndex];
+            showToast('🖼️ 切换图片', 1200);
+        });
 
         // ============================================================
         //  播放器核心
@@ -964,7 +1026,7 @@
                 const status = document.createElement('div');
                 status.className = 'status';
                 if (origIdx === activeIndex && isPlaying) {
-                    status.innerHTML = '<span class="playing-icon">🌱</span>';
+                    status.innerHTML = '<span class="playing-icon">❀</span>';
                 } else {
                     status.innerHTML = `<span class="index-number">${pos + 1}</span>`;
                 }
@@ -1093,8 +1155,10 @@
             renderPlaylist(0);
             updateModeTip();
             flowerContainer.classList.remove('playing');
+            // 确保封面图片显示第一张
+            coverImage.src = imageList[0];
             setTimeout(() => {
-                showToast('🌸 生日快乐', 2200);
+                showToast('🎉🎉🎉生日快乐🍰🍰🍰', 2200);
             }, 500);
             audio.addEventListener('error', () => {
                 showToast('⚠️ 音频加载失败，请检查网络或更换歌曲', 3000);
@@ -1112,7 +1176,14 @@
             prev: prevSong,
             togglePlay,
             toggleShuffle,
-            toggleLike
+            toggleLike,
+            imageList,
+            currentImageIndex,
+            switchImage: () => {
+                currentImageIndex = (currentImageIndex + 1) % imageList.length;
+                coverImage.src = imageList[currentImageIndex];
+                showToast('🖼️ 切换图片', 1200);
+            }
         };
 
         init();
